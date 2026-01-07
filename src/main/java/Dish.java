@@ -47,12 +47,13 @@ public class Dish {
         this.ingredients = ingredients;
     }
 
-    public double getDishPrice() {
-        double price = 0;
-        for (Ingredient ingredient : ingredients) {
-            price += ingredient.getPrice();
+    public double getDishCost() {
+        if (this.ingredients == null || this.ingredients.isEmpty()) {
+            return 0.0;
         }
-        return price;
+        return this.ingredients.stream()
+                .mapToDouble(Ingredient::getPrice)
+                .sum();
     }
 
     public String toString() {
