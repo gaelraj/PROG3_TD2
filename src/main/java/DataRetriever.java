@@ -205,12 +205,10 @@ public class DataRetriever {
         String insertDishSql = "INSERT INTO dish (id, name, dish_type) VALUES (?, ?, ?::dish_type)";
         String updateDishSql = "UPDATE dish SET name = ?, dish_type = ?::dish_type WHERE id = ?";
         String deleteIngredientsSql = "DELETE FROM ingredient WHERE id_dish = ?";
-        String insertIngredientSql = "INSERT INTO ingredient (id, name, price, category, id_dish) VALUES (?, ?, ?, ?::category, ?)";
+        String insertIngredientSql = "INSERT INTO ingredient (id, name, price, category, id_dish, required_quantity) VALUES (?, ?, ?, ?::category, ?, ?)";
 
         try (Connection connection = dbConnection.getDBConnection()) {
-
             connection.setAutoCommit(false);
-
             try {
                 boolean exists;
                 try (PreparedStatement checkStmt = connection.prepareStatement(checkingDishQuery)) {
@@ -220,16 +218,14 @@ public class DataRetriever {
                         exists = resultSet.getInt(1) > 0;
                     }
                 }
-
                 if (!exists) {
-                    try (PreparedStatement insertStmt = connection.prepareStatement(insertDishSql)
-                    ) {
+                    try (PreparedStatement insertStmt = connection.prepareStatement(insertDishSql)) {
                         insertStmt.setInt(1, dishToSave.getId());
                         insertStmt.setString(2, dishToSave.getName());
                         insertStmt.setString(3, dishToSave.getDishType().name());
                         insertStmt.executeUpdate();
-
                     }
+                    System.out.println("Dish created with ID: " + dishToSave.getId());
                 } else {
                     try (PreparedStatement updateStmt = connection.prepareStatement(updateDishSql)) {
                         updateStmt.setString(1, dishToSave.getName());
@@ -237,6 +233,7 @@ public class DataRetriever {
                         updateStmt.setInt(3, dishToSave.getId());
                         updateStmt.executeUpdate();
                     }
+                    System.out.println("Dish updated with ID: " + dishToSave.getId());
                 }
 
                 try (PreparedStatement deleteStmt = connection.prepareStatement(deleteIngredientsSql)) {
@@ -247,30 +244,37 @@ public class DataRetriever {
                 if (dishToSave.getIngredients() != null) {
                     try (PreparedStatement insertIngStmt = connection.prepareStatement(insertIngredientSql)) {
                         for (Ingredient ing : dishToSave.getIngredients()) {
+
                             insertIngStmt.setInt(1, ing.getId());
                             insertIngStmt.setString(2, ing.getName());
                             insertIngStmt.setDouble(3, ing.getPrice());
                             insertIngStmt.setString(4, ing.getCategory().name());
                             insertIngStmt.setInt(5, dishToSave.getId());
+
+                            if (ing.getRequiredQuantity() != null) {
+                                insertIngStmt.setDouble(6, ing.getRequiredQuantity());
+                            } else {
+                                insertIngStmt.setNull(6, java.sql.Types.NUMERIC);
+                            }
+
                             insertIngStmt.executeUpdate();
                         }
                     }
                 }
 
                 connection.commit();
-                return dishToSave;
+                return findDishById(dishToSave.getId());
 
             } catch (Exception e) {
                 connection.rollback();
-                throw new RuntimeException("Error saving dish: " + e.getMessage());
+                throw new RuntimeException("Error saving dish: " + e.getMessage(), e);
             } finally {
                 connection.setAutoCommit(true);
             }
-
         } catch (SQLException e) {
-            throw new RuntimeException("Connection Error: " + e.getMessage());
+            throw new RuntimeException("Connection Error: " + e.getMessage(), e);
         }
-    };
+    }
 
     public List<Dish> findDishsByIngredientName(String ingredientName) {
         String query = "SELECT d.id AS dish_id, d.name AS dish_name, d.dish_type, " +
