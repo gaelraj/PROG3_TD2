@@ -13,28 +13,72 @@ public class DataRetriever {
     }
 
     public Dish findDishById(Integer id) {
-        String query = """
-                SELECT Dish.id as dish_id, Dish.name as dish_name, dish_type
-                FROM Dish
-                WHERE id = ?  
-                """;
-        try (Connection connection = dbConnection.getDBConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query);
-        ) {
+        String dishQuery = """
+            SELECT Dish.id as dish_id, Dish.name as dish_name, dish_type
+            FROM Dish
+            WHERE id = ?  
+            """;
 
-            preparedStatement.setInt(1, id);
-            try (ResultSet resultSet = preparedStatement.executeQuery();) {
-                if (resultSet.next()) {
-                    Dish dish = new Dish(
-                            resultSet.getInt("dish_id"),
-                            resultSet.getString("dish_name"),
-                            DishTypeEnum.valueOf(resultSet.getString("dish_type"))
-                    );
-                    return dish;
+        String ingredientsQuery = """
+            SELECT i.id AS ingredient_id, 
+                   i.name AS ingredient_name, 
+                   i.price, 
+                   i.category, 
+                   i.required_quantity
+            FROM ingredient i
+            WHERE i.id_dish = ?
+            ORDER BY i.id
+            """;
+
+        try (Connection connection = dbConnection.getDBConnection()) {
+
+            Dish dish = null;
+            try (PreparedStatement preparedStatement = connection.prepareStatement(dishQuery)) {
+                preparedStatement.setInt(1, id);
+
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next()) {
+                        dish = new Dish(
+                                resultSet.getInt("dish_id"),
+                                resultSet.getString("dish_name"),
+                                DishTypeEnum.valueOf(resultSet.getString("dish_type"))
+                        );
+                    } else {
+                        throw new RuntimeException("Dish not found");
+                    }
                 }
-
-                throw new RuntimeException("Dish not found");
             }
+
+            List<Ingredient> ingredients = new ArrayList<>();
+
+            try (PreparedStatement ingredientsStmt = connection.prepareStatement(ingredientsQuery)) {
+                ingredientsStmt.setInt(1, id);
+
+                try (ResultSet ingredientsRs = ingredientsStmt.executeQuery()) {
+                    while (ingredientsRs.next()) {
+                        Double requiredQuantity = null;
+                        Object qtyObj = ingredientsRs.getObject("required_quantity");
+                        if (qtyObj != null) {
+                            requiredQuantity = ingredientsRs.getDouble("required_quantity");
+                        }
+
+                        Ingredient ingredient = new Ingredient(
+                                ingredientsRs.getInt("ingredient_id"),
+                                ingredientsRs.getString("ingredient_name"),
+                                ingredientsRs.getDouble("price"),
+                                CategoryEnum.valueOf(ingredientsRs.getString("category")),
+                                dish,
+                                requiredQuantity
+                        );
+
+                        ingredients.add(ingredient);
+                    }
+                }
+            }
+
+            dish.setIngredients(ingredients);
+
+            return dish;
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
