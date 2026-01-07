@@ -51,8 +51,18 @@ public class Dish {
         if (this.ingredients == null || this.ingredients.isEmpty()) {
             return 0.0;
         }
+
+        for (Ingredient ingredient : this.ingredients) {
+            if (ingredient.getRequiredQuantity() == null) {
+                throw new IllegalStateException(
+                        "Cannot calculate dish cost: required quantity is unknown for ingredient '"
+                                + ingredient.getName() + "'"
+                );
+            }
+        }
+
         return this.ingredients.stream()
-                .mapToDouble(Ingredient::getPrice)
+                .mapToDouble(ingredient -> ingredient.getPrice() * ingredient.getRequiredQuantity())
                 .sum();
     }
 
