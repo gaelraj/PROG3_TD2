@@ -44,12 +44,18 @@ public class DataRetriever {
     public List<Ingredient> findIngredients(int page, int size) {
         List<Ingredient> ingredients = new ArrayList<>();
         String query = """
-                SELECT Ingredient.id as ingredient_id, Ingredient.name as ingredient_name, Ingredient.price as ingredient_price, Ingredient.category,
-                        Dish.id as dish_id, Dish.name as dish_name, dish_type 
-                FROM Ingredient
-                INNER JOIN Dish on Ingredient.id = Dish.id
-                ORDER BY Ingredient.id
-                LIMIT ? OFFSET ?
+                SELECT Ingredient.id as ingredient_id, 
+                   Ingredient.name as ingredient_name, 
+                   Ingredient.price as ingredient_price, 
+                   Ingredient.category,
+                   Ingredient.required_quantity,
+                   Dish.id as dish_id, 
+                   Dish.name as dish_name, 
+                   dish_type 
+            FROM Ingredient
+            INNER JOIN Dish ON Ingredient.id_dish = Dish.id
+            ORDER BY Ingredient.id
+            LIMIT ? OFFSET ?
                 """;
         int offset = (page - 1) * size;
 
@@ -67,12 +73,20 @@ public class DataRetriever {
                             DishTypeEnum.valueOf(resultSet.getString("dish_type"))
                     );
 
+                    Double requiredQuantity = null;
+                    Object qtyObj = resultSet.getObject("required_quantity");
+
+                    if (qtyObj != null) {
+                        requiredQuantity = resultSet.getDouble("required_quantity");
+                    }
+
                     Ingredient ingredient = new Ingredient(
                             resultSet.getInt("ingredient_id"),
                             resultSet.getString("ingredient_name"),
                             resultSet.getDouble("ingredient_price"),
                             CategoryEnum.valueOf(resultSet.getString("category")),
-                            dish
+                            dish,
+                            requiredQuantity
                     );
 
                     ingredients.add(ingredient);
@@ -89,7 +103,7 @@ public class DataRetriever {
         List<Ingredient> savedIngredients = new ArrayList<>();
 
         String checkingQuery = "SELECT COUNT(*) FROM ingredient WHERE name = ?";
-        String insertionQuery = "INSERT INTO ingredient (id, name, price, category, id_dish) VALUES (?, ?, ?, ?::category, ?)";
+        String insertionQuery = "INSERT INTO ingredient (id, name, price, category, id_dish, required_quantity) VALUES (?, ?, ?, ?::category, ?, ?)";
 
         try (Connection connection = dbConnection.getDBConnection()
         ) {
@@ -113,7 +127,18 @@ public class DataRetriever {
                     insertStmt.setString(2, ingredient.getName());
                     insertStmt.setDouble(3,ingredient.getPrice());
                     insertStmt.setString(4, ingredient.getCategory().name());
-                    insertStmt.setInt(5, ingredient.getDish().getId());
+
+                    if (ingredient.getDish() != null) {
+                        insertStmt.setInt(5, ingredient.getDish().getId());
+                    } else {
+                        insertStmt.setNull(5, java.sql.Types.INTEGER);
+                    }
+
+                    if (ingredient.getRequiredQuantity() != null) {
+                        insertStmt.setDouble(6, ingredient.getRequiredQuantity());
+                    } else {
+                        insertStmt.setNull(6, java.sql.Types.NUMERIC);
+                    }
 
                     insertStmt.executeUpdate();
                     savedIngredients.add(ingredient);
@@ -268,6 +293,7 @@ public class DataRetriever {
         List<Ingredient> ingredientList = new ArrayList<>();
         StringBuilder sqlBuilder = new StringBuilder(
                 "SELECT i.id AS ingredient_id, i.name AS ingredient_name, i.price, i.category, " +
+                        "i.required_quantity, " +  // Ajout ici
                         "d.id AS dish_id, d.name AS dish_name, d.dish_type " +
                         "FROM ingredient i " +
                         "JOIN dish d ON i.id_dish = d.id WHERE 1=1"
@@ -283,7 +309,6 @@ public class DataRetriever {
             sqlBuilder.append(" AND d.name ILIKE ?");
         }
 
-        // Pagination
         sqlBuilder.append(" ORDER BY i.id LIMIT ? OFFSET ?");
 
         try (Connection connection = dbConnection.getDBConnection();
@@ -302,7 +327,7 @@ public class DataRetriever {
             }
 
             preparedStatement.setInt(paramIndex++, size);
-            preparedStatement.setInt(paramIndex, (page - 1) * size); // OFFSET = (page - 1) * size
+            preparedStatement.setInt(paramIndex, (page - 1) * size);
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -312,12 +337,19 @@ public class DataRetriever {
                             DishTypeEnum.valueOf(resultSet.getString("dish_type"))
                     );
 
+                    Double requiredQuantity = null;
+                    Object qtyObject = resultSet.getObject("required_quantity");
+                    if (qtyObject != null) {
+                        requiredQuantity = resultSet.getDouble("required_quantity");
+                    }
+
                     Ingredient ingredient = new Ingredient(
                             resultSet.getInt("ingredient_id"),
                             resultSet.getString("ingredient_name"),
                             resultSet.getDouble("price"),
                             CategoryEnum.valueOf(resultSet.getString("category")),
-                            dish
+                            dish,
+                            requiredQuantity
                     );
 
                     ingredientList.add(ingredient);
