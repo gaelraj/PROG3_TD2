@@ -79,7 +79,7 @@ public class Ingredient {
                 ", Price: " + price +
                 ", Category: " + category +
                 ", Required Quantity: " + requiredQuantity +
-                ", Dish: " + dish +
-                ", Unit: " + unit;
+                " " + unit +
+                ", Dish: " + dish;
     }
 }
