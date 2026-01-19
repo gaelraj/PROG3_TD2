@@ -4,6 +4,7 @@ public class Dish {
     private int id;
     private String name;
     private DishTypeEnum dishType;
+    private Double price;
     private List<Ingredient> ingredients;
 
     public Dish(int id, String name, DishTypeEnum dishType) {
@@ -34,6 +35,14 @@ public class Dish {
 
     public void setDishType(DishTypeEnum dishType) {
         this.dishType = dishType;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
     }
 
     public List<Ingredient> getIngredients() {

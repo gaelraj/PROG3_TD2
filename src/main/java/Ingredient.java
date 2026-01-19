@@ -5,18 +5,20 @@ public class Ingredient {
     private CategoryEnum category;
     private Dish dish;
     private Double requiredQuantity;
+    private String unit;
 
-    public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish, Double requiredQuantity) {
+    public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish, Double requiredQuantity , String unit) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.category = category;
         this.dish = dish;
         this.requiredQuantity = requiredQuantity;
+        this.unit = unit;
     }
 
-    public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish) {
-        this(id, name, price, category, dish, null);
+    public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish, String unit) {
+        this(id, name, price, category, dish, null, unit);
     }
 
     public int getId() {
@@ -63,12 +65,21 @@ public class Ingredient {
         this.requiredQuantity = requiredQuantity;
     }
 
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
     public String toString() {
         return "ID: " + id +
                 ", Name: " + name +
                 ", Price: " + price +
                 ", Category: " + category +
                 ", Required Quantity: " + requiredQuantity +
-                ", Dish: " + dish;
+                ", Dish: " + dish +
+                ", Unit: " + unit;
     }
 }
