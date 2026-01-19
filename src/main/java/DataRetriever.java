@@ -99,7 +99,7 @@ public class DataRetriever {
         }
     };
     //Mise en commentaire car il y a plein de truc à modifié;
-/*
+
     public List<Ingredient> findIngredients(int page, int size) {
         List<Ingredient> ingredients = new ArrayList<>();
         String query = """
@@ -107,12 +107,14 @@ public class DataRetriever {
                    Ingredient.name as ingredient_name, 
                    Ingredient.price as ingredient_price, 
                    Ingredient.category,
-                   Ingredient.required_quantity,
+                   DishIngredient.quantity_required,
+                   DishIngredient.unit,
                    Dish.id as dish_id, 
                    Dish.name as dish_name, 
-                   dish_type 
-            FROM Ingredient
-            INNER JOIN Dish ON Ingredient.id_dish = Dish.id
+                   dish_type
+            FROM DishIngredient
+            INNER JOIN Ingredient ON Ingredient.id = DishIngredient.id_ingredient
+            INNER JOIN Dish ON Dish.id = DishIngredient.id_dish
             ORDER BY Ingredient.id
             LIMIT ? OFFSET ?
                 """;
@@ -133,10 +135,10 @@ public class DataRetriever {
                     );
 
                     Double requiredQuantity = null;
-                    Object qtyObj = resultSet.getObject("required_quantity");
+                    Object qtyObj = resultSet.getObject("quantity_required");
 
                     if (qtyObj != null) {
-                        requiredQuantity = resultSet.getDouble("required_quantity");
+                        requiredQuantity = resultSet.getDouble("quantity_required");
                     }
 
                     Ingredient ingredient = new Ingredient(
@@ -145,7 +147,8 @@ public class DataRetriever {
                             resultSet.getDouble("ingredient_price"),
                             CategoryEnum.valueOf(resultSet.getString("category")),
                             dish,
-                            requiredQuantity
+                            requiredQuantity,
+                            resultSet.getString("unit")
                     );
 
                     ingredients.add(ingredient);
@@ -157,7 +160,7 @@ public class DataRetriever {
         };
         return ingredients;
     };
-
+/*
     public List<Ingredient> createIngredients(List<Ingredient> newIngredients) {
         List<Ingredient> savedIngredients = new ArrayList<>();
 
