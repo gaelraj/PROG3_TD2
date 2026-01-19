@@ -14,7 +14,7 @@ public class DataRetriever {
 
     public Dish findDishById(Integer id) {
         String dishQuery = """
-            SELECT Dish.id as dish_id, Dish.name as dish_name, dish_type
+            SELECT Dish.id as dish_id, Dish.name as dish_name, dish_type, price
             FROM Dish
             WHERE id = ?  
             """;
@@ -22,11 +22,13 @@ public class DataRetriever {
         String ingredientsQuery = """
             SELECT i.id AS ingredient_id, 
                    i.name AS ingredient_name, 
-                   i.price, 
+                   i.price AS ingredient_price, 
                    i.category, 
-                   i.required_quantity
-            FROM ingredient i
-            WHERE i.id_dish = ?
+                   di.quantity_required,
+                   di.unit
+            FROM DishIngredient di
+            JOIN Ingredient i ON i.id = di.id_ingredient
+            WHERE di.id_dish = ?
             ORDER BY i.id
             """;
 
@@ -38,11 +40,20 @@ public class DataRetriever {
 
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     if (resultSet.next()) {
+
+                        Double price = null;
+                        Object priceObj = resultSet.getObject("price");
+
+                        if (priceObj != null) {
+                            price = resultSet.getDouble("price");
+                        }
+
                         dish = new Dish(
                                 resultSet.getInt("dish_id"),
                                 resultSet.getString("dish_name"),
                                 DishTypeEnum.valueOf(resultSet.getString("dish_type"))
                         );
+                        dish.setPrice(price);
                     } else {
                         throw new RuntimeException("Dish not found");
                     }
@@ -57,18 +68,21 @@ public class DataRetriever {
                 try (ResultSet ingredientsRs = ingredientsStmt.executeQuery()) {
                     while (ingredientsRs.next()) {
                         Double requiredQuantity = null;
-                        Object qtyObj = ingredientsRs.getObject("required_quantity");
+                        Object qtyObj = ingredientsRs.getObject("quantity_required");
                         if (qtyObj != null) {
-                            requiredQuantity = ingredientsRs.getDouble("required_quantity");
+                            requiredQuantity = ingredientsRs.getDouble("quantity_required");
                         }
+
+                        String unit = ingredientsRs.getString("unit");
 
                         Ingredient ingredient = new Ingredient(
                                 ingredientsRs.getInt("ingredient_id"),
                                 ingredientsRs.getString("ingredient_name"),
-                                ingredientsRs.getDouble("price"),
+                                ingredientsRs.getDouble("ingredient_price"),
                                 CategoryEnum.valueOf(ingredientsRs.getString("category")),
                                 dish,
-                                requiredQuantity
+                                requiredQuantity,
+                                unit
                         );
 
                         ingredients.add(ingredient);
@@ -84,7 +98,8 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     };
-
+    //Mise en commentaire car il y a plein de truc à modifié;
+/*
     public List<Ingredient> findIngredients(int page, int size) {
         List<Ingredient> ingredients = new ArrayList<>();
         String query = """
@@ -408,5 +423,8 @@ public class DataRetriever {
         }
 
         return ingredientList;
-    }
+    };
+
+
+ */
 }
