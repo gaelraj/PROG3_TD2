@@ -8,7 +8,7 @@ public class Main {
         DBConnection dbConnection = new DBConnection();
         DataRetriever dataRetriever = new DataRetriever(dbConnection);
         //a
-        System.out.println(dataRetriever.findDishById(1));
+        //System.out.println(dataRetriever.findDishById(1));
 
         //c
         /*List<Ingredient>  ingredients = dataRetriever.findIngredients(2,2);
@@ -56,7 +56,7 @@ public class Main {
             System.out.println(ingredient);
         }*/
 
-        System.out.println("\n--- Test 1.1: Plat avec quantités définies (ex: Salade, id=1) ---");
+        /*System.out.println("\n--- Test 1.1: Plat avec quantités définies (ex: Salade, id=1) ---");
         try {
             Dish dish1 = dataRetriever.findDishById(1);
             System.out.println("Plat récupéré: " + dish1);
@@ -90,7 +90,23 @@ public class Main {
 
         // Calculer le coût depuis l'objet retourné
         double cost = savedDish.getDishCost(); // 1.5*3 + 1.2*1 = 5.7 €
-        System.out.println("Coût total: " + cost + " €");
+        System.out.println("Coût total: " + cost + " €");*/
+/*
+        Dish dish = dataRetriever.findDishById(1);
+        System.out.println("Plat: " + dish.getName());
+        System.out.println("Prix de vente: " + dish.getPrice());
+
+        for (Ingredient ing : dish.getIngredients()) {
+            System.out.println("  - " + ing.getName() +
+                    " : " + ing.getRequiredQuantity() +
+                    " " + ing.getUnit());
+        }*/
+
+        List<Ingredient> ingredients = dataRetriever.findIngredients(1,6);
+        for (Ingredient ingredient : ingredients) {
+            System.out.println(ingredient);
+        }
+
 
 
 
