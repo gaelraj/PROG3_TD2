@@ -373,7 +373,7 @@ public class DataRetriever {
 
         return dishList;
     };
-/*
+
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
 
         if (page < 1 || size <= 0) {
@@ -382,11 +382,19 @@ public class DataRetriever {
 
         List<Ingredient> ingredientList = new ArrayList<>();
         StringBuilder sqlBuilder = new StringBuilder(
-                "SELECT i.id AS ingredient_id, i.name AS ingredient_name, i.price, i.category, " +
-                        "i.required_quantity, " +  // Ajout ici
-                        "d.id AS dish_id, d.name AS dish_name, d.dish_type " +
-                        "FROM ingredient i " +
-                        "JOIN dish d ON i.id_dish = d.id WHERE 1=1"
+                """
+                SELECT d.id AS dish_id, d.name AS dish_name, d.dish_type,
+                d.price AS dish_price,
+                i.id AS ingredient_id, i.name AS ingredient_name,
+                i.price AS ingredient_price,
+                i.category AS ingredient_category,
+                di.quantity_required,
+                di.unit
+                FROM DishIngredient di
+                INNER JOIN Dish d ON di.id_dish = d.id
+                INNER JOIN Ingredient i ON di.id_ingredient = i.id
+                WHERE 1=1
+                """
         );
 
         if (ingredientName != null && !ingredientName.isEmpty()) {
@@ -424,22 +432,24 @@ public class DataRetriever {
                     Dish dish = new Dish(
                             resultSet.getInt("dish_id"),
                             resultSet.getString("dish_name"),
-                            DishTypeEnum.valueOf(resultSet.getString("dish_type"))
+                            DishTypeEnum.valueOf(resultSet.getString("dish_type")),
+                            resultSet.getDouble("dish_price")
                     );
 
                     Double requiredQuantity = null;
-                    Object qtyObject = resultSet.getObject("required_quantity");
+                    Object qtyObject = resultSet.getObject("quantity_required");
                     if (qtyObject != null) {
-                        requiredQuantity = resultSet.getDouble("required_quantity");
+                        requiredQuantity = resultSet.getDouble("quantity_required");
                     }
 
                     Ingredient ingredient = new Ingredient(
                             resultSet.getInt("ingredient_id"),
                             resultSet.getString("ingredient_name"),
-                            resultSet.getDouble("price"),
-                            CategoryEnum.valueOf(resultSet.getString("category")),
+                            resultSet.getDouble("ingredient_price"),
+                            CategoryEnum.valueOf(resultSet.getString("ingredient_category")),
                             dish,
-                            requiredQuantity
+                            requiredQuantity,
+                            resultSet.getString("unit")
                     );
 
                     ingredientList.add(ingredient);
@@ -452,6 +462,4 @@ public class DataRetriever {
         return ingredientList;
     };
 
-
- */
 }
