@@ -17,8 +17,8 @@ public class Ingredient {
         this.unit = unit;
     }
 
-    public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish, String unit) {
-        this(id, name, price, category, dish, null, unit);
+    public Ingredient(int id, String name, Double price, CategoryEnum category) {
+        this(id, name, price, category, null, null, null);
     }
 
     public int getId() {
