@@ -7,10 +7,11 @@ public class Dish {
     private Double price;
     private List<Ingredient> ingredients;
 
-    public Dish(int id, String name, DishTypeEnum dishType) {
+    public Dish(int id, String name, DishTypeEnum dishType,Double price) {
         this.id = id;
         this.name = name;
         this.dishType = dishType;
+        this.price = price;
     }
 
     public int getId() {
