@@ -307,14 +307,21 @@ public class DataRetriever {
         }
     }
 
-    /*
     public List<Dish> findDishsByIngredientName(String ingredientName) {
-        String query = "SELECT d.id AS dish_id, d.name AS dish_name, d.dish_type, " +
-                "i.id AS ingredient_id, i.name AS ingredient_name, i.price, i.category " +
-                "FROM dish d " +
-                "JOIN ingredient i ON d.id = i.id_dish " +
-                "WHERE i.name ILIKE ? " +
-                "ORDER BY d.id";
+        String query = """
+                        SELECT d.id AS dish_id, d.name AS dish_name, d.dish_type,
+		d.price AS dish_price,
+		i.id AS ingredient_id, i.name AS ingredient_name,
+		i.price AS ingredient_price,
+		i.category AS ingredient_category,
+		di.quantity_required,
+		di.unit
+		FROM DishIngredient di
+		INNER JOIN Dish d ON di.id_dish = d.id
+		INNER JOIN Ingredient i ON di.id_ingredient = i.id 
+		WHERE i.name ILIKE ?
+		ORDER BY d.id;
+      """;
 
         List<Dish> dishList = new ArrayList<>();
 
@@ -340,7 +347,8 @@ public class DataRetriever {
                         dishCourant = new Dish(
                                 dish_id,
                                 resultSet.getString("dish_name"),
-                                DishTypeEnum.valueOf(resultSet.getString("dish_type"))
+                                DishTypeEnum.valueOf(resultSet.getString("dish_type")),
+                                resultSet.getDouble("dish_price")
                         );
                         dishCourant.setIngredients(new ArrayList<>());
                         dishList.add(dishCourant);
@@ -349,9 +357,11 @@ public class DataRetriever {
                     Ingredient ingredient = new Ingredient(
                             resultSet.getInt("ingredient_id"),
                             resultSet.getString("ingredient_name"),
-                            resultSet.getDouble("price"),
-                            CategoryEnum.valueOf(resultSet.getString("category")),
-                            dishCourant
+                            resultSet.getDouble("ingredient_price"),
+                            CategoryEnum.valueOf(resultSet.getString("ingredient_category")),
+                            dishCourant,
+                            resultSet.getDouble("quantity_required"),
+                            resultSet.getString("unit")
                     );
                     dishCourant.getIngredients().add(ingredient);
                 }
@@ -363,7 +373,7 @@ public class DataRetriever {
 
         return dishList;
     };
-
+/*
     public List<Ingredient> findIngredientsByCriteria(String ingredientName, CategoryEnum category, String dishName, int page, int size) {
 
         if (page < 1 || size <= 0) {
