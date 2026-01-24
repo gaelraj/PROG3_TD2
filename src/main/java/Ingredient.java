@@ -1,11 +1,13 @@
 public class Ingredient {
-    private final int id;
-    private final String name;
+    private int id;
+    private String name;
     private Double price;
     private CategoryEnum category;
     private Dish dish;
     private Double requiredQuantity;
     private String unit;
+
+    public Ingredient() {};
 
     public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish, Double requiredQuantity , String unit) {
         this.id = id;
@@ -25,8 +27,16 @@ public class Ingredient {
         return id;
     }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public Double getPrice() {
