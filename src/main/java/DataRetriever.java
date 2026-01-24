@@ -3,7 +3,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class DataRetriever {
     private final DBConnection dbConnection;
@@ -99,7 +101,56 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     };
-    //Mise en commentaire car il y a plein de truc à modifié;
+
+    public Ingredient findIngredientById(Integer id) {
+        String ingredientQuery =
+                """
+                SELECT i.id AS ingredient_id,
+                       i.name AS ingredient_name,
+                       i.price AS ingredient_price,
+                       i.category
+                FROM Ingredient i 
+                WHERE i.id = ?
+                """;
+
+        if (id == null) {
+            throw new RuntimeException("id must not be null");
+        };
+
+        try (Connection connection = dbConnection.getDBConnection()) {
+
+            Ingredient ingredient = null;
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(ingredientQuery)) {
+                preparedStatement.setInt(1, id);
+
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next()) {
+                        Double price = null;
+                        Object priceObj = resultSet.getObject("ingredient_price");
+                        if (priceObj != null) {
+                            price = resultSet.getDouble("ingredient_price");
+                        }
+
+                        ingredient = new Ingredient();
+
+                        ingredient.setId(resultSet.getInt("ingredient_id"));
+                        ingredient.setName(resultSet.getString("ingredient_name"));
+                        ingredient.setPrice(price);
+                        ingredient.setCategory(CategoryEnum.valueOf(resultSet.getString("category")));
+
+                    } else {
+                        throw new RuntimeException("Ingredient not found");
+                    }
+                }
+
+                return ingredient;
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public List<Ingredient> findIngredients(int page, int size) {
         List<Ingredient> ingredients = new ArrayList<>();
@@ -307,7 +358,7 @@ public class DataRetriever {
         }
     }
 
-    public List<Dish> findDishsByIngredientName(String ingredientName) {
+    public List<Dish> findDishByIngredientName(String ingredientName) {
         String query = """
                         SELECT d.id AS dish_id, d.name AS dish_name, d.dish_type,
 		d.price AS dish_price,
@@ -460,6 +511,42 @@ public class DataRetriever {
         }
 
         return ingredientList;
+    };
+
+    public List<DishIngredient> addIngredientToDish(List<DishIngredient> dishIngredients) {
+
+        if (dishIngredients == null || dishIngredients.isEmpty()) {
+            throw new IllegalArgumentException("Dish ingredients must not be null or empty");
+        }
+
+        String insertQuery =
+                """
+                    INSERT INTO dishingredient (id, id_dish, id_ingredient, quantity_required, unit) VALUES (?, ?, ?, ?, ?::unit_type);
+                """;
+
+        List<DishIngredient> dishIngredientList = new ArrayList<>();
+
+        try (Connection connection = dbConnection.getDBConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(insertQuery)) {
+
+            for (DishIngredient dishIngredient : dishIngredients) {
+
+                preparedStatement.setInt(1, dishIngredient.getId());
+                preparedStatement.setInt(2, dishIngredient.getDishId());
+                preparedStatement.setInt(3, dishIngredient.getIngredientId());
+                preparedStatement.setDouble(4, dishIngredient.getQuantity_required());
+                preparedStatement.setString(5, dishIngredient.getUnit().name());
+
+                preparedStatement.executeUpdate();
+                dishIngredientList.add(dishIngredient);
+            }
+
+            return dishIngredientList;
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error adding ingredient: " + e.getMessage(), e);
+        }
+
     };
 
 }
