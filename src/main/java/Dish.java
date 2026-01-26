@@ -76,6 +76,16 @@ public class Dish {
                 .sum();
     }
 
+    public double getGrossMargin() {
+        if (this.price == null ) {
+            throw new RuntimeException("No price has been specified: "+ price);
+        }
+
+        double price = this.price - this.getDishCost();
+
+        return price;
+    }
+
     public String toString() {
         return "ID: " + id + " Name: " + name + " DishType: " + dishType + " Price: " + price;
     }
