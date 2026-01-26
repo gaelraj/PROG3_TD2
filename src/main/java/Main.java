@@ -7,109 +7,27 @@ public class Main {
 
         DBConnection dbConnection = new DBConnection();
         DataRetriever dataRetriever = new DataRetriever(dbConnection);
-        //a
-        //System.out.println(dataRetriever.findDishById(1));
 
-        //c
-        /*List<Ingredient>  ingredients = dataRetriever.findIngredients(2,2);
-        for (Ingredient ingredient : ingredients) {
-            System.out.println(ingredient);
-        }*/
+        //Test for getDishCost method :
+        // Nom du plat        : id
+        // Salade fraîche     : 1
+        // Poulet grillé      : 2
+        // Riz aux légumes    : 3
+        // Gâteau au chocolat : 4
+        // Salade de fruits   : 5
+        Double dishcost = dataRetriever.findDishById(5).getDishCost();
+        System.out.println(dishcost);
 
-        /*Dish dish = new Dish(1, "Salade fraîche", DishTypeEnum.START);
+        //Test for getGrossMargin method:
+        // Nom de l'ingredient : id
+        // Laitue              : 1
+        // Tomate              : 2
+        // Poulet              : 3
+        // Chocolat            : 4
+        // Beurre              : 5
 
-        List<Ingredient> ingredientsToCreate = List.of(
-                new Ingredient(6, "Fromage", 2.5, CategoryEnum.DAIRY, dish),   // supposons déjà en base
-                new Ingredient(7, "Tomate", 1.5, CategoryEnum.VEGETABLE, dish),
-                new Ingredient(8, "Olives", 1.0, CategoryEnum.VEGETABLE, dish)
-        );
-
-        List<Ingredient> ingredientCreated = dataRetriever.createIngredients(ingredientsToCreate);
-
-        for (Ingredient ingredient : ingredientCreated) {
-            System.out.println(ingredient);
-        };*/
-
-        //d
-        /*
-        Dish newDish = new Dish(6, "Pizza Margherita Test", DishTypeEnum.MAIN);
-        Dish dishToCreate = dataRetriever.saveDish(newDish);
-        System.out.println(dishToCreate);
-        System.out.println("Dish created!");
-
-        //e
-        List<Dish> dishToFind = dataRetriever.findDishsByIngredientName("eur");
-        for (Dish dish : dishToFind) {
-            System.out.println(dish);
-        }
-
-        //f
-        System.out.println("Ingredient to find: ");
-        String ingName = null;
-        CategoryEnum category = CategoryEnum.VEGETABLE;
-        String dishName = null;
-        int page = 1;
-        int size = 10;
-
-        List<Ingredient> ingredientListToFindByCriteria = dataRetriever.findIngredientsByCriteria(ingName, category, dishName, page, size);
-        for (Ingredient ingredient : ingredientListToFindByCriteria) {
-            System.out.println(ingredient);
-        }*/
-
-        /*System.out.println("\n--- Test 1.1: Plat avec quantités définies (ex: Salade, id=1) ---");
-        try {
-            Dish dish1 = dataRetriever.findDishById(1);
-            System.out.println("Plat récupéré: " + dish1);
-            System.out.println("Ingrédients du plat:");
-            for (Ingredient ingredient : dish1.getIngredients()) {
-                System.out.println("  - " + ingredient.getName() +
-                        " | Prix: " + ingredient.getPrice() +
-                        " | Quantité: " + ingredient.getRequiredQuantity());
-            }
-
-            double cost = dish1.getDishCost();
-            System.out.println("✅ Coût total du plat calculé: " + cost + " €");
-
-        } catch (IllegalStateException e) {
-            System.out.println("❌ Exception levée: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("❌ Erreur: " + e.getMessage());
-        }
-
-        // Test : Créer un plat avec ingrédients
-        Dish newDish = new Dish(102, "Salade méditerranéenne", DishTypeEnum.START);
-
-        List<Ingredient> ingredients = new ArrayList<>();
-        ingredients.add(new Ingredient(10, "Tomate", 1.5, CategoryEnum.VEGETABLE, newDish, 3.0));
-        ingredients.add(new Ingredient(11, "Concombre", 1.2, CategoryEnum.VEGETABLE, newDish, 1.0));
-
-        newDish.setIngredients(ingredients);
-
-
-        Dish savedDish = dataRetriever.saveDish(newDish);
-
-        // Calculer le coût depuis l'objet retourné
-        double cost = savedDish.getDishCost(); // 1.5*3 + 1.2*1 = 5.7 €
-        System.out.println("Coût total: " + cost + " €");*/
-/*
-        Dish dish = dataRetriever.findDishById(1);
-        System.out.println("Plat: " + dish.getName());
-        System.out.println("Prix de vente: " + dish.getPrice());
-
-        for (Ingredient ing : dish.getIngredients()) {
-            System.out.println("  - " + ing.getName() +
-                    " : " + ing.getRequiredQuantity() +
-                    " " + ing.getUnit());
-        }*/
-
-        List<Ingredient> ingredients = dataRetriever.findIngredients(1,6);
-        for (Ingredient ingredient : ingredients) {
-            System.out.println(ingredient);
-        }
-
-
-
-
+        Double dishGrossMargin = dataRetriever.findDishById(5).getGrossMargin();
+        System.out.println(dishGrossMargin);
 
 
 
