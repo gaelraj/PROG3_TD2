@@ -14,6 +14,15 @@ END $$;
 
 DO $$
 BEGIN
+
+    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'dish_id_seq') THEN
+        CREATE SEQUENCE dish_id_seq;
+        ALTER TABLE Dish ALTER COLUMN id SET DEFAULT nextval('dish_id_seq');
+        ALTER SEQUENCE dish_id_seq OWNED BY Dish.id;
+        PERFORM setval('dish_id_seq', COALESCE((SELECT MAX(id) FROM Dish), 0) + 1, false);
+        RAISE NOTICE 'ID Dish configured to auto-incrément (SERIAL)';
+    END IF;
+
     IF NOT EXISTS (
         SELECT 1
         FROM information_schema.columns
@@ -47,6 +56,17 @@ CREATE TABLE IF NOT EXISTS DishIngredient (
 
 DO $$
     BEGIN
+
+        IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'ingredient_id_seq') THEN
+            CREATE SEQUENCE ingredient_id_seq;
+            ALTER TABLE Ingredient ALTER COLUMN id SET DEFAULT nextval('ingredient_id_seq');
+            ALTER SEQUENCE ingredient_id_seq OWNED BY Ingredient.id;
+            PERFORM setval('ingredient_id_seq', COALESCE((SELECT MAX(id) FROM Ingredient), 0) + 1, false);
+            RAISE NOTICE 'ID Ingredient configured to auto-incrément (SERIAL)';
+        ELSE
+            RAISE NOTICE 'Sequence ingredient_id_seq already exists';
+        END IF;
+
         IF EXISTS (
             SELECT 1
             FROM information_schema.columns
@@ -67,3 +87,28 @@ DO $$
             RAISE NOTICE 'Column required_quantity dropped from Ingredient table';
         END IF;
 END $$;
+
+DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'movement_type') THEN
+            CREATE TYPE movement_type AS ENUM ('IN', 'OUT');
+            RAISE NOTICE 'Type movement_type created successfully';
+        ELSE
+            RAISE NOTICE 'Type movement_type already exists';
+        END IF;
+    END $$;
+
+CREATE TABLE IF NOT EXISTS StockMovement (
+    id SERIAL PRIMARY KEY,
+    id_ingredient INT NOT NULL,
+    quantity NUMERIC(10,2) NOT NULL,
+    type movement_type NOT NULL,
+    unit unit_type NOT NULL,
+    creation_datetime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_stockmovement_ingredient
+        FOREIGN KEY (id_ingredient) REFERENCES Ingredient(id)
+            ON DELETE CASCADE,
+
+    CONSTRAINT check_quantity_positive CHECK (quantity > 0)
+);
