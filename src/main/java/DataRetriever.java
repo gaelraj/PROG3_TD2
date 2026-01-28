@@ -1,7 +1,4 @@
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,17 +18,19 @@ public class DataRetriever {
             WHERE id = ?  
             """;
 
-        String ingredientsQuery = """
-            SELECT i.id AS ingredient_id, 
-                   i.name AS ingredient_name, 
-                   i.price AS ingredient_price, 
-                   i.category, 
-                   di.quantity_required,
-                   di.unit
-            FROM DishIngredient di
-            JOIN Ingredient i ON i.id = di.id_ingredient
-            WHERE di.id_dish = ?
-            ORDER BY i.id
+        String dishIngredientsQuery = """
+             SELECT di.id as di_id, 
+               di.id_dish, 
+               di.id_ingredient, 
+               di.quantity_required, 
+               di.unit,
+               i.id as ingredient_id, 
+               i.name as ingredient_name, 
+               i.price, 
+               i.category
+        FROM DishIngredient di
+        JOIN Ingredient i ON di.id_ingredient = i.id
+        WHERE di.id_dish = ?
             """;
 
         try (Connection connection = dbConnection.getDBConnection()) {
@@ -50,50 +49,56 @@ public class DataRetriever {
                             price = resultSet.getDouble("price");
                         }
 
-                        dish = new Dish(
-                                resultSet.getInt("dish_id"),
-                                resultSet.getString("dish_name"),
-                                DishTypeEnum.valueOf(resultSet.getString("dish_type")),
-                                resultSet.getDouble("price")
-                        );
+                        dish = new Dish();
+                        dish.setId(resultSet.getInt("dish_id"));
+                        dish.setName(resultSet.getString("dish_name"));
+                        dish.setDishType(DishTypeEnum.valueOf(resultSet.getString("dish_type")));
+
                         dish.setPrice(price);
+
                     } else {
                         throw new RuntimeException("Dish not found");
                     }
                 }
             }
 
-            List<Ingredient> ingredients = new ArrayList<>();
+            List<DishIngredient> dishIngredients = new ArrayList<>();
 
-            try (PreparedStatement ingredientsStmt = connection.prepareStatement(ingredientsQuery)) {
-                ingredientsStmt.setInt(1, id);
+            try (PreparedStatement dishIngredientsStmt = connection.prepareStatement(dishIngredientsQuery)) {
+                dishIngredientsStmt.setInt(1, id);
 
-                try (ResultSet ingredientsRs = ingredientsStmt.executeQuery()) {
-                    while (ingredientsRs.next()) {
+                try (ResultSet dishIngredientsRs = dishIngredientsStmt.executeQuery()) {
+
+                    while (dishIngredientsRs.next()) {
+
                         Double requiredQuantity = null;
-                        Object qtyObj = ingredientsRs.getObject("quantity_required");
+                        Object qtyObj = dishIngredientsRs.getObject("quantity_required");
                         if (qtyObj != null) {
-                            requiredQuantity = ingredientsRs.getDouble("quantity_required");
+                            requiredQuantity = dishIngredientsRs.getDouble("quantity_required");
                         }
 
-                        String unit = ingredientsRs.getString("unit");
+                        DishIngredient dishIng = new DishIngredient();
+                        dishIng.setId(dishIngredientsRs.getInt("di_id"));
+                        dishIng.setDishId(dishIngredientsRs.getInt("id_dish"));
+                        dishIng.setIngredientId(dishIngredientsRs.getInt("id_ingredient"));
+                        dishIng.setQuantity_required(requiredQuantity);
+                        dishIng.setUnit(UnitEnum.valueOf(dishIngredientsRs.getString("unit")));
 
-                        Ingredient ingredient = new Ingredient(
-                                ingredientsRs.getInt("ingredient_id"),
-                                ingredientsRs.getString("ingredient_name"),
-                                ingredientsRs.getDouble("ingredient_price"),
-                                CategoryEnum.valueOf(ingredientsRs.getString("category")),
-                                dish,
-                                requiredQuantity,
-                                unit
-                        );
+                        Ingredient ingredient = new Ingredient();
+                        ingredient.setId(dishIngredientsRs.getInt("ingredient_id"));
+                        ingredient.setName(dishIngredientsRs.getString("ingredient_name"));
+                        ingredient.setPrice(dishIngredientsRs.getDouble("price"));
+                        ingredient.setCategory(CategoryEnum.valueOf(dishIngredientsRs.getString("category")));
 
-                        ingredients.add(ingredient);
+                        dishIng.setIngredient(ingredient);
+                        dishIng.setDish(dish);
+
+                        dishIngredients.add(dishIng);
                     }
                 }
             }
 
-            dish.setIngredients(ingredients);
+            dish.setDishIngredients(dishIngredients);
 
             return dish;
 
@@ -113,6 +118,19 @@ public class DataRetriever {
                 WHERE i.id = ?
                 """;
 
+        String stockMovementsQuery =
+                """        
+                SELECT sm.id as sm_id,
+                    sm.id_ingredient,
+                    sm.quantity,
+                    sm.type,
+                    sm.unit,
+                    sm.creation_datetime
+                FROM stockmovement sm
+                WHERE sm.id_ingredient = ?
+                ORDER BY sm.creation_datetime DESC
+                """;
+
         if (id == null) {
             throw new RuntimeException("id must not be null");
         };
@@ -126,6 +144,7 @@ public class DataRetriever {
 
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     if (resultSet.next()) {
+
                         Double price = null;
                         Object priceObj = resultSet.getObject("ingredient_price");
                         if (priceObj != null) {
@@ -133,7 +152,6 @@ public class DataRetriever {
                         }
 
                         ingredient = new Ingredient();
-
                         ingredient.setId(resultSet.getInt("ingredient_id"));
                         ingredient.setName(resultSet.getString("ingredient_name"));
                         ingredient.setPrice(price);
@@ -143,6 +161,35 @@ public class DataRetriever {
                         throw new RuntimeException("Ingredient not found");
                     }
                 }
+
+                List<StockMovement> stockMovements = new ArrayList<>();
+                try (PreparedStatement stockMovementsStmt = connection.prepareStatement(stockMovementsQuery)) {
+                    stockMovementsStmt.setInt(1, id);
+                    try (ResultSet stockMovementsRs = stockMovementsStmt.executeQuery()) {
+                        while (stockMovementsRs.next()) {
+
+                            Double quantity = null;
+                            Object qtyObj = stockMovementsRs.getObject("quantity");
+                            if (qtyObj != null) {
+                                quantity = stockMovementsRs.getDouble("quantity");
+                            }
+
+                            StockValue stockValue = new StockValue();
+                            stockValue.setQuantity(quantity);
+                            stockValue.setUnit(UnitEnum.valueOf(stockMovementsRs.getString("unit")));
+
+                            StockMovement movement = new StockMovement();
+                            movement.setId(stockMovementsRs.getInt("sm_id"));
+                            movement.setValue(stockValue);
+                            movement.setType(MovementTypeEnum.valueOf(stockMovementsRs.getString("type")));
+                            movement.setCreationDatetime(stockMovementsRs.getTimestamp("creation_datetime").toInstant());
+
+                            stockMovements.add(movement);
+                        }
+                    }
+                }
+
+                ingredient.setStockMovementList(stockMovements);
 
                 return ingredient;
             }
@@ -158,17 +205,10 @@ public class DataRetriever {
                 SELECT Ingredient.id as ingredient_id, 
                    Ingredient.name as ingredient_name, 
                    Ingredient.price as ingredient_price, 
-                   Ingredient.category,
-                   DishIngredient.quantity_required,
-                   DishIngredient.unit,
-                   Dish.id as dish_id, 
-                   Dish.name as dish_name, 
-                   dish_type
-            FROM DishIngredient
-            INNER JOIN Ingredient ON Ingredient.id = DishIngredient.id_ingredient
-            INNER JOIN Dish ON Dish.id = DishIngredient.id_dish
-            ORDER BY Ingredient.id
-            LIMIT ? OFFSET ?
+                   Ingredient.category
+                FROM Ingredient
+                ORDER BY Ingredient.id
+                LIMIT ? OFFSET ?
                 """;
         int offset = (page - 1) * size;
 
@@ -180,29 +220,12 @@ public class DataRetriever {
 
             try (ResultSet resultSet = preparedStatement.executeQuery();) {
                 while (resultSet.next()) {
-                    Dish dish = new Dish(
-                            resultSet.getInt("dish_id"),
-                            resultSet.getString("dish_name"),
-                            DishTypeEnum.valueOf(resultSet.getString("dish_type")),
-                            resultSet.getDouble("price")
-                    );
 
-                    Double requiredQuantity = null;
-                    Object qtyObj = resultSet.getObject("quantity_required");
-
-                    if (qtyObj != null) {
-                        requiredQuantity = resultSet.getDouble("quantity_required");
-                    }
-
-                    Ingredient ingredient = new Ingredient(
-                            resultSet.getInt("ingredient_id"),
-                            resultSet.getString("ingredient_name"),
-                            resultSet.getDouble("ingredient_price"),
-                            CategoryEnum.valueOf(resultSet.getString("category")),
-                            dish,
-                            requiredQuantity,
-                            resultSet.getString("unit")
-                    );
+                    Ingredient ingredient = new Ingredient();
+                    ingredient.setId(resultSet.getInt("ingredient_id"));
+                    ingredient.setName(resultSet.getString("ingredient_name"));
+                    ingredient.setPrice(resultSet.getDouble("ingredient_price"));
+                    ingredient.setCategory(CategoryEnum.valueOf(resultSet.getString("category")));
 
                     ingredients.add(ingredient);
                 }
@@ -320,20 +343,20 @@ public class DataRetriever {
                     deleteStmt.executeUpdate();
                 }
 
-                if (dishToSave.getIngredients() != null && !dishToSave.getIngredients().isEmpty()) {
+                if (dishToSave.getDishIngredients() != null && !dishToSave.getDishIngredients().isEmpty()) {
                     try (PreparedStatement insertDishIngStmt = connection.prepareStatement(insertDishIngredientSql)) {
-                        for (Ingredient ing : dishToSave.getIngredients()) {
+                        for (DishIngredient dishIng : dishToSave.getDishIngredients()) {
                             insertDishIngStmt.setInt(1, dishToSave.getId());
-                            insertDishIngStmt.setInt(2, ing.getId());
+                            insertDishIngStmt.setInt(2, dishIng.getIngredientId() );
 
-                            if (ing.getRequiredQuantity() != null) {
-                                insertDishIngStmt.setDouble(3, ing.getRequiredQuantity());
+                            if (dishIng.getQuantity_required() != null) {
+                                insertDishIngStmt.setDouble(3, dishIng.getQuantity_required());
                             } else {
                                 insertDishIngStmt.setNull(3, java.sql.Types.NUMERIC);
                             }
 
-                            if (ing.getUnit() != null) {
-                                insertDishIngStmt.setString(4, ing.getUnit());
+                            if (dishIng.getUnit() != null) {
+                                insertDishIngStmt.setString(4, dishIng.getUnit().name());
                             } else {
                                 insertDishIngStmt.setString(4, "PCS");
                             }
@@ -365,6 +388,7 @@ public class DataRetriever {
 		i.id AS ingredient_id, i.name AS ingredient_name,
 		i.price AS ingredient_price,
 		i.category AS ingredient_category,
+		di.id AS di_id,
 		di.quantity_required,
 		di.unit
 		FROM DishIngredient di
@@ -395,26 +419,24 @@ public class DataRetriever {
                     }
                     
                     if (dishCourant == null) {
-                        dishCourant = new Dish(
-                                dish_id,
-                                resultSet.getString("dish_name"),
-                                DishTypeEnum.valueOf(resultSet.getString("dish_type")),
-                                resultSet.getDouble("dish_price")
-                        );
-                        dishCourant.setIngredients(new ArrayList<>());
+                        dishCourant = new Dish();
+                        dishCourant.setId(dish_id);
+                        dishCourant.setName(resultSet.getString("dish_name"));
+                        dishCourant.setDishType(DishTypeEnum.valueOf(resultSet.getString("dish_type")));
+                        dishCourant.setPrice(resultSet.getDouble("dish_price"));
+
                         dishList.add(dishCourant);
                     }
                     
-                    Ingredient ingredient = new Ingredient(
-                            resultSet.getInt("ingredient_id"),
-                            resultSet.getString("ingredient_name"),
-                            resultSet.getDouble("ingredient_price"),
-                            CategoryEnum.valueOf(resultSet.getString("ingredient_category")),
-                            dishCourant,
-                            resultSet.getDouble("quantity_required"),
-                            resultSet.getString("unit")
-                    );
-                    dishCourant.getIngredients().add(ingredient);
+                    DishIngredient dishIng = new DishIngredient();
+                    dishIng.setId(resultSet.getInt("di_id"));
+                    dishIng.setDishId(resultSet.getInt("dish_id"));
+                    dishIng.setIngredientId(resultSet.getInt("ingredient_id"));
+                    dishIng.setQuantity_required(resultSet.getDouble("quantity_required"));
+                    dishIng.setUnit(UnitEnum.valueOf(resultSet.getString("unit")));
+
+
+                    dishCourant.getDishIngredients().add(dishIng);
                 }
             }
 
@@ -432,6 +454,7 @@ public class DataRetriever {
         }
 
         List<Ingredient> ingredientList = new ArrayList<>();
+
         StringBuilder sqlBuilder = new StringBuilder(
                 """
                 SELECT d.id AS dish_id, d.name AS dish_name, d.dish_type,
@@ -493,15 +516,11 @@ public class DataRetriever {
                         requiredQuantity = resultSet.getDouble("quantity_required");
                     }
 
-                    Ingredient ingredient = new Ingredient(
-                            resultSet.getInt("ingredient_id"),
-                            resultSet.getString("ingredient_name"),
-                            resultSet.getDouble("ingredient_price"),
-                            CategoryEnum.valueOf(resultSet.getString("ingredient_category")),
-                            dish,
-                            requiredQuantity,
-                            resultSet.getString("unit")
-                    );
+                    Ingredient ingredient = new Ingredient();
+                    ingredient.setId(resultSet.getInt("ingredient_id"));
+                    ingredient.setName(resultSet.getString("ingredient_name"));
+                    ingredient.setPrice(resultSet.getDouble("ingredient_price"));
+                    CategoryEnum.valueOf(resultSet.getString("ingredient_category"));
 
                     ingredientList.add(ingredient);
                 }
@@ -549,4 +568,118 @@ public class DataRetriever {
 
     };
 
-}
+    public Ingredient saveIngredient(Ingredient toSave) {
+        String checkIngredientQuery = "SELECT COUNT(*) FROM Ingredient WHERE id = ?";
+
+        String insertIngredientQuery = """
+            INSERT INTO Ingredient (name, price, category) 
+            VALUES (?, ?, ?::ingredient_category)
+            RETURNING id
+            """;
+
+        String updateIngredientQuery = """
+            UPDATE Ingredient 
+            SET name = ?, price = ?, category = ?::ingredient_category 
+            WHERE id = ?
+        """;
+
+        String insertStockMovementQuery = """
+        INSERT INTO stockmovement (id, id_ingredient, quantity, type, unit, creation_datetime)
+        VALUES (?, ?, ?, ?::movement_type, ?::unit_type, ?)
+        ON CONFLICT (id) DO NOTHING
+        """;
+
+        try (Connection connection = dbConnection.getDBConnection()) {
+            connection.setAutoCommit(false);
+
+            try {
+                Integer ingredientId = toSave.getId();
+                boolean ingredientExists = false;
+
+                if (ingredientId != null && ingredientId > 0) {
+                    try (PreparedStatement checkStmt = connection.prepareStatement(checkIngredientQuery)) {
+                        checkStmt.setInt(1, ingredientId);
+                        try (ResultSet rs = checkStmt.executeQuery()) {
+                            rs.next();
+                            ingredientExists = rs.getInt(1) > 0;
+                        }
+                    }
+                }
+
+                if (!ingredientExists) {
+
+                    try (PreparedStatement insertStmt = connection.prepareStatement(insertIngredientQuery)) {
+                        insertStmt.setString(1, toSave.getName());
+                        insertStmt.setObject(2, toSave.getPrice());
+                        insertStmt.setString(3, toSave.getCategory().name());
+
+                        try (ResultSet rs = insertStmt.executeQuery()) {
+                            if (rs.next()) {
+                                ingredientId = rs.getInt(1);
+                                toSave.setId(ingredientId);
+                            }
+                        }
+                    }
+                    System.out.println("Ingredient created with ID: " + ingredientId);
+                } else {
+
+                    try (PreparedStatement updateStmt = connection.prepareStatement(updateIngredientQuery)) {
+                        updateStmt.setString(1, toSave.getName());
+                        updateStmt.setObject(2, toSave.getPrice());
+                        updateStmt.setString(3, toSave.getCategory().name());
+                        updateStmt.setInt(4, ingredientId);
+                        updateStmt.executeUpdate();
+                    }
+                    System.out.println("Ingredient updated with ID: " + ingredientId);
+                }
+
+                // 3. ✅ GESTION DES MOUVEMENTS DE STOCK (selon la consigne)
+                // Pour chaque mouvement dans stockMovementList :
+                //   - Si l'ID existe déjà en base → ON CONFLICT DO NOTHING (on ne fait rien)
+                //   - Si l'ID n'existe pas → on ajoute le mouvement
+                // ⚠️ PAS DE SUPPRESSION possible des mouvements existants
+
+                if (toSave.getStockMovementList() != null && !toSave.getStockMovementList().isEmpty()) {
+                    try (PreparedStatement insertMovementStmt = connection.prepareStatement(insertStockMovementQuery)) {
+
+                        for (StockMovement movement : toSave.getStockMovementList()) {
+
+                            if (movement.getId() <= 0) {
+
+                                String getNextIdQuery = "SELECT COALESCE(MAX(id), 0) + 1 FROM stockmovement";
+                                try (PreparedStatement nextIdStmt = connection.prepareStatement(getNextIdQuery);
+                                     ResultSet nextIdRs = nextIdStmt.executeQuery()) {
+                                    if (nextIdRs.next()) {
+                                        movement.setId(nextIdRs.getInt(1));
+                                    }
+                                }
+                            }
+
+                            insertMovementStmt.setInt(1, movement.getId());
+                            insertMovementStmt.setInt(2, ingredientId);
+                            insertMovementStmt.setObject(3, movement.getValue().getQuantity());
+                            insertMovementStmt.setString(4, movement.getType().name());
+                            insertMovementStmt.setString(5, UnitEnum.KG.name());
+                            insertMovementStmt.setTimestamp(6, Timestamp.from(movement.getCreationDatetime()));
+
+                            insertMovementStmt.executeUpdate();
+                        }
+                    }
+                }
+
+                connection.commit();
+
+                return findIngredientById(ingredientId);
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw new RuntimeException("Error saving ingredient: " + e.getMessage(), e);
+            } finally {
+                connection.setAutoCommit(true);
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Connection error: " + e.getMessage(), e);
+        }
+    };
+};
