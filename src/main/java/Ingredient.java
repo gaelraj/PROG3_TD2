@@ -1,29 +1,27 @@
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
 public class Ingredient {
-    private int id;
+    private Integer id;
     private String name;
     private Double price;
     private CategoryEnum category;
-    private Dish dish;
-    private Double requiredQuantity;
-    private String unit;
+    private List<StockMovement> stockMovementList;
 
-    public Ingredient() {};
+    public Ingredient() {
+        stockMovementList = new ArrayList<>();
+    };
 
-    public Ingredient(int id, String name, Double price, CategoryEnum category, Dish dish, Double requiredQuantity , String unit) {
+    public Ingredient(int id, String name, Double price, CategoryEnum category) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.category = category;
-        this.dish = dish;
-        this.requiredQuantity = requiredQuantity;
-        this.unit = unit;
+        this.stockMovementList = new ArrayList<>();
     }
 
-    public Ingredient(int id, String name, Double price, CategoryEnum category) {
-        this(id, name, price, category, null, null, null);
-    }
-
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
@@ -55,6 +53,15 @@ public class Ingredient {
         this.category = category;
     }
 
+    public List<StockMovement> getStockMovementList() {
+        return stockMovementList;
+    }
+
+    public void setStockMovementList(List<StockMovement> stockMovementList) {
+        this.stockMovementList = stockMovementList;
+    }
+
+    /*
     public Dish getDish() {
         return dish;
     }
@@ -81,15 +88,31 @@ public class Ingredient {
 
     public void setUnit(String unit) {
         this.unit = unit;
+    }*/
+
+    public StockValue getStockValueAt(Instant at) {
+
+        double total = 0.0;
+
+        for (StockMovement movement : stockMovementList) {
+
+            if (!movement.getCreationDatetime().isAfter(at)) {
+
+                if (movement.getType() == MovementTypeEnum.IN) {
+                    total += movement.getValue().getQuantity();
+                } else if (movement.getType() == MovementTypeEnum.OUT) {
+                    total -= movement.getValue().getQuantity();
+                }
+            }
+        }
+
+        return new StockValue(total, UnitEnum.KG);
     }
 
     public String toString() {
         return "ID: " + id +
                 ", Name: " + name +
                 ", Price: " + price +
-                ", Category: " + category +
-                ", Required Quantity: " + requiredQuantity +
-                " " + unit +
-                ", Dish: " + dish;
+                ", Category: " + category;
     }
 }
