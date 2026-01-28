@@ -633,12 +633,6 @@ public class DataRetriever {
                     System.out.println("Ingredient updated with ID: " + ingredientId);
                 }
 
-                // 3. ✅ GESTION DES MOUVEMENTS DE STOCK (selon la consigne)
-                // Pour chaque mouvement dans stockMovementList :
-                //   - Si l'ID existe déjà en base → ON CONFLICT DO NOTHING (on ne fait rien)
-                //   - Si l'ID n'existe pas → on ajoute le mouvement
-                // ⚠️ PAS DE SUPPRESSION possible des mouvements existants
-
                 if (toSave.getStockMovementList() != null && !toSave.getStockMovementList().isEmpty()) {
                     try (PreparedStatement insertMovementStmt = connection.prepareStatement(insertStockMovementQuery)) {
 

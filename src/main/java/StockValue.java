@@ -24,4 +24,8 @@ public class StockValue {
     public void setUnit(UnitEnum unit) {
         this.unit = unit;
     }
+
+    public String toString() {
+        return "StockValue{" + "quantity=" + quantity + ", unit=" + unit + '}';
+    }
 }

@@ -47,4 +47,8 @@ public class StockMovement {
         this.creationDatetime = creationDatetime;
     }
 
+    public String toString() {
+        return "ID: " + id + " Value: " + value + " Type: " + type + " CreationDatetime: " + creationDatetime;
+    }
+
 }
