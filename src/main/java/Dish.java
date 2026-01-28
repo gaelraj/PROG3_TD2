@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 public class Dish {
@@ -5,13 +6,18 @@ public class Dish {
     private String name;
     private DishTypeEnum dishType;
     private Double price;
-    private List<Ingredient> ingredients;
+    private List<DishIngredient> dishIngredients;
+
+    public Dish() {
+        this.dishIngredients = new ArrayList<>();
+    }
 
     public Dish(int id, String name, DishTypeEnum dishType,Double price) {
         this.id = id;
         this.name = name;
         this.dishType = dishType;
         this.price = price;
+        this.dishIngredients = new ArrayList<>();
     }
 
     public int getId() {
@@ -46,34 +52,34 @@ public class Dish {
         this.price = price;
     }
 
-    public List<Ingredient> getIngredients() {
-        return ingredients;
+    public List<DishIngredient> getDishIngredients() {
+        return dishIngredients;
     }
 
-    public void setIngredients(List<Ingredient> ingredients) {
-        for (int i = 0; i < ingredients.size(); i++) {
-            ingredients.get(i).setDish(this);
-        }
-        this.ingredients = ingredients;
+    public void setDishIngredients(List<DishIngredient> dishIngredients) {
+        this.dishIngredients = dishIngredients;
     }
 
     public double getDishCost() {
-        if (this.ingredients == null || this.ingredients.isEmpty()) {
+        if (this.dishIngredients == null || this.dishIngredients.isEmpty()) {
             return 0.0;
         }
 
-        for (Ingredient ingredient : this.ingredients) {
-            if (ingredient.getRequiredQuantity() == null) {
-                throw new IllegalStateException(
-                        "Cannot calculate dish cost: required quantity is unknown for ingredient '"
-                                + ingredient.getName() + "'"
-                );
+        double totalCost = 0.0;
+
+        for (DishIngredient dishIngredient : this.dishIngredients) {
+            if (dishIngredient.getIngredient() != null &&
+                dishIngredient.getIngredient().getPrice() != null &&
+                dishIngredient.getQuantity_required() != null
+            ) {
+                double ingredientCost = dishIngredient.getIngredient().getPrice() *
+                                        dishIngredient.getQuantity_required();
+                totalCost += ingredientCost;
             }
         }
 
-        return this.ingredients.stream()
-                .mapToDouble(ingredient -> ingredient.getPrice() * ingredient.getRequiredQuantity())
-                .sum();
+        return totalCost;
+
     }
 
     public double getGrossMargin() {
