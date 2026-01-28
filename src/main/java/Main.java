@@ -1,4 +1,5 @@
 import java.sql.Connection;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,7 @@ public class Main {
         // Riz aux légumes    : 3
         // Gâteau au chocolat : 4
         // Salade de fruits   : 5
-        Double dishcost = dataRetriever.findDishById(5).getDishCost();
+        Double dishcost = dataRetriever.findDishById(1).getDishCost();
         System.out.println(dishcost);
 
         //Test for getGrossMargin method:
@@ -26,10 +27,13 @@ public class Main {
         // Chocolat            : 4
         // Beurre              : 5
 
-        Double dishGrossMargin = dataRetriever.findDishById(5).getGrossMargin();
+        Double dishGrossMargin = dataRetriever.findDishById(1).getGrossMargin();
         System.out.println(dishGrossMargin);
 
-
+        //Get Ingredient stock
+        Ingredient ingredient = dataRetriever.findIngredientById(2);
+        StockValue stockValue = ingredient.getStockValueAt(Instant.parse("2024-01-06T12:00:00Z"));
+        System.out.println(stockValue);
 
     }
 }
