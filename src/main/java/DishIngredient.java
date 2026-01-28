@@ -8,6 +8,8 @@ public class DishIngredient {
     private Dish dish;
     private Ingredient ingredient;
 
+    public DishIngredient() {};
+
     public DishIngredient(int id, int dishId, int ingredientId, Double quantity_required, UnitEnum unit) {
         this.id = id;
         this.dishId = dishId;
