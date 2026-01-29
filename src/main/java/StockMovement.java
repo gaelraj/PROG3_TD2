@@ -1,7 +1,7 @@
 import java.time.Instant;
 
 public class StockMovement {
-    private int id;
+    private Integer id;
     private StockValue value;
     private MovementTypeEnum type;
     private Instant creationDatetime;
@@ -15,7 +15,7 @@ public class StockMovement {
         this.creationDatetime = creationDatetime;
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
