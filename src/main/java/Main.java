@@ -34,6 +34,6 @@ public class Main {
         Ingredient ingredient = dataRetriever.findIngredientById(2);
         StockValue stockValue = ingredient.getStockValueAt(Instant.parse("2024-01-06T12:00:00Z"));
         System.out.println(stockValue);
-
+        //Commit before exam
     }
 }
