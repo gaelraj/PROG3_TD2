@@ -112,3 +112,22 @@ CREATE TABLE IF NOT EXISTS StockMovement (
 
     CONSTRAINT check_quantity_positive CHECK (quantity > 0)
 );
+
+CREATE TABLE IF NOT EXISTS "order" (
+    id SERIAL PRIMARY KEY,
+    reference VARCHAR,
+    creation_datetime TIMESTAMP WITHOUT TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS DishOrder (
+    id SERIAL PRIMARY KEY,
+    id_order INT,
+    id_dish INT,
+    quantity NUMERIC,
+    CONSTRAINT fk_dishorder_order
+        FOREIGN KEY (id_order) REFERENCES "order"(id),
+
+    CONSTRAINT fk_dishorder_dish
+        FOREIGN KEY (id_dish) REFERENCES Dish(id)
+
+);
