@@ -1,7 +1,7 @@
+import javax.management.remote.JMXConnectionNotification;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class DataRetriever {
@@ -729,4 +729,146 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     };
+
+    public double getAvailableStockForIngredient(int ingredientId) {
+        String query = """
+            SELECT 
+                COALESCE(SUM(CASE WHEN type = 'IN' THEN quantity ELSE 0 END), 0) -
+                COALESCE(SUM(CASE WHEN type = 'OUT' THEN quantity ELSE 0 END), 0) AS available_stock
+            FROM stockmovement
+            WHERE id_ingredient = ?
+            GROUP BY id_ingredient
+            """;
+
+        try (Connection connection = dbConnection.getDBConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
+
+            ps.setInt(1, ingredientId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("available_stock");
+                } else {
+                    return 0.0;
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error calculating available stock for ingredient " + ingredientId, e);
+        }
+    };
+
+    public void checkStockAvailability(Order order) {
+        if (order == null || order.getDishOrderList() == null || order.getDishOrderList().isEmpty()) {
+            throw new IllegalArgumentException("Order or dish orders cannot be null or empty");
+        }
+
+        Map<Integer, Double> requiredQuantities = new HashMap<>();
+
+
+        for (DishOrder dishOrder : order.getDishOrderList()) {
+            Dish dish = findDishById(dishOrder.getDish().getId());
+
+            for (DishIngredient dishIngredient : dish.getDishIngredients()) {
+                int ingredientId = dishIngredient.getIngredientId();
+                double quantityRequired = dishIngredient.getQuantity_required() != null
+                        ? dishIngredient.getQuantity_required()
+                        : 0.0;
+
+                double totalRequired = quantityRequired * dishOrder.getQuantity();
+
+                requiredQuantities.merge(ingredientId, totalRequired, Double::sum);
+            }
+        }
+
+
+        for (Map.Entry<Integer, Double> entry : requiredQuantities.entrySet()) {
+            int ingredientId = entry.getKey();
+            double requiredQuantity = entry.getValue();
+            double availableStock = getAvailableStockForIngredient(ingredientId);
+
+            if (availableStock < requiredQuantity) {
+
+                Ingredient ingredient = findIngredientById(ingredientId);
+                throw new RuntimeException(
+                        "Insufficient stock for ingredient '" + ingredient.getName() +
+                                "'. Required: " + requiredQuantity +
+                                ", Available: " + availableStock
+                );
+            }
+        }
+    };
+
+    public Order saveOrder(Order orderToSave) {
+
+        checkStockAvailability(orderToSave);
+
+        try (Connection connection = dbConnection.getDBConnection()) {
+            connection.setAutoCommit(false);
+
+            try {
+                // 1. Créer référence
+                String sqlRef = "SELECT MAX(CAST(SUBSTRING(reference FROM 4) AS INTEGER)) FROM \"order\"";
+                String reference;
+
+                try (PreparedStatement ps = connection.prepareStatement(sqlRef);
+                     ResultSet rs = ps.executeQuery()) {
+
+                    int nextNumber = 1;
+                    if (rs.next() && rs.getObject(1) != null) {
+                        nextNumber = rs.getInt(1) + 1;
+                    }
+                    reference = String.format("ORD%05d", nextNumber);
+                }
+
+                orderToSave.setReference(reference);
+
+                // 2. Préparer date
+                if (orderToSave.getCreationDatetime() == null) {
+                    orderToSave.setCreationDatetime(Instant.now());
+                }
+
+                // 3. Insérer commande
+                String sqlOrder = "INSERT INTO \"order\" (reference, creation_datetime) VALUES (?, ?) RETURNING id";
+                int orderId;
+
+                try (PreparedStatement ps = connection.prepareStatement(sqlOrder)) {
+                    ps.setString(1, reference);
+                    ps.setTimestamp(2, Timestamp.from(orderToSave.getCreationDatetime()));
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        rs.next();
+                        orderId = rs.getInt(1);
+                    }
+                }
+
+                orderToSave.setId(orderId);
+
+                // 4. Insérer plats
+                String sqlDish = "INSERT INTO dishorder (id_order, id_dish, quantity) VALUES (?, ?, ?)";
+                try (PreparedStatement ps = connection.prepareStatement(sqlDish)) {
+                    for (DishOrder dishOrder : orderToSave.getDishOrderList()) {
+                        ps.setInt(1, orderId);
+                        ps.setInt(2, dishOrder.getDish().getId());
+                        ps.setInt(3, dishOrder.getQuantity());
+                        ps.executeUpdate();
+                    }
+                }
+
+                connection.commit();
+                return orderToSave;
+
+            } catch (Exception e) {
+                connection.rollback();
+                throw new RuntimeException("Error: " + e.getMessage(), e);
+            } finally {
+                connection.setAutoCommit(true);
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error BD: " + e.getMessage(), e);
+        }
+    }
+
+
 };
